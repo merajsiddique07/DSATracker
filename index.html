@@ -516,7 +516,6 @@
         </div>
       </div>
     </div>
-
    <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
       import {
@@ -529,7 +528,7 @@
         doc,
         query,
         orderBy,
-      } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
+      } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js";
       // Replace these values with your Firebase project's Web App config.
   const firebaseConfig = {
     apiKey: "AIzaSyCRCm-p27uM-gpkhajiJHqCoe41wZBSzkI",
@@ -542,7 +541,7 @@
 
   // Initialize Firebase
   const app = initializeApp(firebaseConfig);
-      const db = getFirestore(firebaseApp);
+      const db = getFirestore(app);
 
       (async function () {
 
@@ -658,8 +657,8 @@
             });
           } catch (error) {
             showStatus("Failed to load from Firebase: " + error.message, "error");
-            console.error(error);
-            problems = [];
+            console.error("Firestore load error:", error);
+            // Keep the current in-memory list intact when loading fails.
           }
         }
 
