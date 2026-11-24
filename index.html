@@ -517,18 +517,34 @@
       </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+   <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
+      import {
+        getFirestore,
+        collection,
+        getDocs,
+        addDoc,
+        updateDoc,
+        deleteDoc,
+        doc,
+        query,
+        orderBy,
+      } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
+      // Replace these values with your Firebase project's Web App config.
+  const firebaseConfig = {
+    apiKey: "AIzaSyCRCm-p27uM-gpkhajiJHqCoe41wZBSzkI",
+    authDomain: "dsatracker-522f3.firebaseapp.com",
+    projectId: "dsatracker-522f3",
+    storageBucket: "dsatracker-522f3.firebasestorage.app",
+    messagingSenderId: "83518438844",
+    appId: "1:83518438844:web:6a6c243de962fe23d17fb9"
+  };
 
-    <script>
-      const SUPABASE_URL = "https://cipqeaavugbtzotkgrzv.supabase.co";
-      const SUPABASE_ANON_KEY =
-        "sb_publishable_nwHcLKc-GGpuBonnDJn9bA_dwXYmcaM";
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+      const db = getFirestore(firebaseApp);
 
-      (function () {
-        const supabaseClient = supabase.createClient(
-          SUPABASE_URL,
-          SUPABASE_ANON_KEY,
-        );
+      (async function () {
 
         const form = document.getElementById("problemForm");
         const titleInput = document.getElementById("titleInput");
@@ -617,67 +633,66 @@
           return `🔄 Not revised yet`;
         }
 
-        // ---------- SUPABASE CRUD ----------
-        async function loadProblemsFromDB() {
-          const { data, error } = await supabaseClient
-            .from("problems")
-            .select("*")
-            .order("created_at", { ascending: false });
+        // ---------- FIREBASE / FIRESTORE CRUD ----------
+        const problemsCollection = collection(db, "problems");
 
-          if (error) {
-            showStatus(
-              "Failed to load from Supabase: " + error.message,
-              "error",
+        async function loadProblemsFromDB() {
+          try {
+            const problemsQuery = query(
+              problemsCollection,
+              orderBy("created_at", "desc")
             );
+            const snapshot = await getDocs(problemsQuery);
+
+            problems = snapshot.docs.map((document) => {
+              const p = document.data();
+              return {
+                id: document.id,
+                title: p.title || "",
+                approach: p.approach || "",
+                code: p.code || "",
+                createdAt: p.created_at || null,
+                updatedAt: p.updated_at || null,
+                lastRevisedAt: p.last_revised_at || null,
+              };
+            });
+          } catch (error) {
+            showStatus("Failed to load from Firebase: " + error.message, "error");
             console.error(error);
-            return;
+            problems = [];
           }
-          problems = (data || []).map((p) => ({
-            id: String(p.id),
-            title: p.title,
-            approach: p.approach || "",
-            code: p.code || "",
-            createdAt: p.created_at,
-            updatedAt: p.updated_at,
-            lastRevisedAt: p.last_revised_at || null,
-          }));
         }
 
         async function insertProblem(title, approach, code) {
-          const { error } = await supabaseClient
-            .from("problems")
-            .insert({ title, approach, code });
-          if (error) throw new Error(error.message);
+          const now = new Date().toISOString();
+          await addDoc(problemsCollection, {
+            title,
+            approach,
+            code,
+            created_at: now,
+            updated_at: null,
+            last_revised_at: null,
+          });
         }
 
         async function updateProblem(id, title, approach, code) {
-          const { error } = await supabaseClient
-            .from("problems")
-            .update({
-              title,
-              approach,
-              code,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", id);
-          if (error) throw new Error(error.message);
+          await updateDoc(doc(db, "problems", id), {
+            title,
+            approach,
+            code,
+            updated_at: new Date().toISOString(),
+          });
         }
 
         async function deleteProblemFromDB(id) {
-          const { error } = await supabaseClient
-            .from("problems")
-            .delete()
-            .eq("id", id);
-          if (error) throw new Error(error.message);
+          await deleteDoc(doc(db, "problems", id));
         }
 
         async function markRevised(id) {
           const now = new Date().toISOString();
-          const { error } = await supabaseClient
-            .from("problems")
-            .update({ last_revised_at: now })
-            .eq("id", id);
-          if (error) throw new Error(error.message);
+          await updateDoc(doc(db, "problems", id), {
+            last_revised_at: now,
+          });
           return now;
         }
 
@@ -907,13 +922,13 @@
         async function init() {
           resetForm();
           if (
-            !SUPABASE_URL ||
-            SUPABASE_URL === "YOUR_SUPABASE_URL" ||
-            !SUPABASE_ANON_KEY ||
-            SUPABASE_ANON_KEY === "YOUR_SUPABASE_ANON_KEY"
+            !firebaseConfig.apiKey ||
+            firebaseConfig.apiKey === "YOUR_FIREBASE_API_KEY" ||
+            !firebaseConfig.projectId ||
+            firebaseConfig.projectId === "YOUR_PROJECT_ID"
           ) {
             showStatus(
-              "⚠️ Supabase URL / anon key not configured. Edit the top of the script.",
+              "⚠️ Firebase config not added. Replace the placeholder values at the top of the script.",
               "error",
             );
             renderProblems();
@@ -924,6 +939,6 @@
 
         init();
       })();
-    </script>
+    </script>  
   </body>
 </html>
